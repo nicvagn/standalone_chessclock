@@ -82,6 +82,8 @@ snip from chess_clock.ino
     break;
 """
 
+# TODO: record timedelta at time of last move, and use that to countdown
+
 
 class ChessClock:
     """a controlling class to encapsulate and facilitate interaction's
@@ -125,7 +127,6 @@ class ChessClock:
             port=serial_port, baudrate=baudrate, timeout=timeout
         )
         self.lcd_length = 16
-        self.game_start = None
         self.displayed_btime = None
         self.displayed_wtime = None
         self.countdown = None
@@ -226,7 +227,7 @@ class ChessClock:
         self.displayed_wtime = None
         self.displayed_btime = None
 
-        self.game_start = datetime.now()
+        self.time_left_at_move = None
         # HACK: tell the clock that that the game started
         self.move_made()
 
@@ -288,15 +289,12 @@ class ChessClock:
             if chess_clock.displayed_wtime is None:
                 sleep(0.5)
                 continue
-            if chess_clock.time_left_at_move is None:
-                sleep(0.5)
-                continue
             # if it is white to move
             if chess_clock.white_to_move:
                 # breakpoint()
                 # create a new timedelta with the updated wtime
                 chess_clock.displayed_wtime = chess_clock.displayed_wtime - (
-                    datetime.now() - chess_clock.time_left_at_move
+                    datetime.now() - chess_clock.move_time
                 )
                 # check for flag for white
                 if ChessClock.did_flag(chess_clock.displayed_wtime):
@@ -310,7 +308,7 @@ class ChessClock:
                 # breakpoint()
                 # create a new timedelta object w updated b time
                 chess_clock.displayed_btime = chess_clock.displayed_btime - (
-                    datetime.now() - chess_clock.time_left_at_move
+                    datetime.now() - chess_clock.move_time
                 )
 
                 # check if black has flaged
