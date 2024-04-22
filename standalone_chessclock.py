@@ -5,16 +5,16 @@
 #
 #  You should have received a copy of the GNU General Public License along with chess_clock. If not, see <https://www.gnu.org/licenses/>.
 
-import serial
-from time import sleep
-from datetime import timedelta, datetime
 import logging
-import readchar
-import sys
 import os
+import sys
+from datetime import datetime, timedelta
 from threading import Thread
+from time import sleep
 
 import berserk
+import readchar
+import serial
 from berserk.exceptions import ResponseError
 
 ### logger stuff ###
@@ -119,6 +119,8 @@ class ChessClock:
         logger=None,
     ):  # , port="/dev/ttyACM0", baudrate=115200, timeout=100.0) -> None:
         """initialize connection with ardino, and record start time"""
+
+        self.TIME_REFRESH = 1
         if logger is not None:
             self.logger = logger
         else:
@@ -145,6 +147,8 @@ class ChessClock:
         before first move on game start before time_keeper is called
         """
 
+        # switch who's turn it is
+        self.white_to_move = not self.white_to_move
         # record the move_time
         self.move_time = datetime.now()
         # record the time player has left at move time
@@ -152,9 +156,6 @@ class ChessClock:
             self.time_left_at_move = self.displayed_wtime
         else:
             self.time_left_at_move = self.displayed_btime
-
-        # switch who's turn it is
-        self.white_to_move = not self.white_to_move
 
     def updateLCD(self, wtime: timedelta, btime: timedelta) -> None:
         """keep the external timer displaying correct time.
@@ -283,6 +284,8 @@ class ChessClock:
             if chess_clock.move_time is None:
                 sleep(0.5)
                 continue
+            if chess_clock.time_left_at_move is None:
+                continue
             if chess_clock.displayed_btime is None:
                 sleep(0.5)
                 continue
@@ -293,21 +296,19 @@ class ChessClock:
             if chess_clock.white_to_move:
                 # breakpoint()
                 # create a new timedelta with the updated wtime
-                chess_clock.displayed_wtime = chess_clock.displayed_wtime - (
+                new_wtime = chess_clock.time_left_at_move - (
                     datetime.now() - chess_clock.move_time
                 )
                 # check for flag for white
-                if ChessClock.did_flag(chess_clock.displayed_wtime):
+                if ChessClock.did_flag(new_wtime):
                     chess_clock.white_won()
                 # update the clock
-                chess_clock.updateLCD(
-                    chess_clock.displayed_wtime, chess_clock.displayed_btime
-                )
+                chess_clock.updateLCD(new_wtime, chess_clock.displayed_btime)
             # else black to move
             else:
                 # breakpoint()
                 # create a new timedelta object w updated b time
-                chess_clock.displayed_btime = chess_clock.displayed_btime - (
+                new_btime = chess_clock.time_left_at_move - (
                     datetime.now() - chess_clock.move_time
                 )
 
@@ -315,11 +316,9 @@ class ChessClock:
                 if ChessClock.did_flag(chess_clock.displayed_btime):
                     chess_clock.black_won()
                 # update the clock
-                chess_clock.updateLCD(
-                    chess_clock.displayed_wtime, chess_clock.displayed_btime
-                )
+                chess_clock.updateLCD(chess_clock.displayed_btime, new_btime)
 
-            sleep(0.5)
+            sleep(chess_clock.TIME_REFRESH)
 
 
 def handle_game_start(event, berserk_client, chess_clock: ChessClock) -> None:
