@@ -132,6 +132,8 @@ class ChessClock:
         self.displayed_btime = None
         self.displayed_wtime = None
         self.countdown = None
+        # white_to_move is true at begining of game
+        self.white_to_move = True
 
         self.time_left_at_move = None
 
@@ -285,6 +287,7 @@ class ChessClock:
                 sleep(0.5)
                 continue
             if chess_clock.time_left_at_move is None:
+                sleep(0.5)
                 continue
             if chess_clock.displayed_btime is None:
                 sleep(0.5)
