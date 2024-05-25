@@ -240,11 +240,14 @@ class ChessClock:
             # send the message
             self.chess_clock.write(message.encode("ascii"))
 
-    def start_new_game(self, game_id: str) -> None:
+    def start_new_game(
+        self,
+        game_id: str,
+    ) -> None:
         """Case 4: signal clock to start a new game
         reset all the game time data.
         """
-        logger.info("\nchess_clock: start_new_game: \n")
+        logger.info("\nchess_clock: start_new_game entered: \n")
 
         # clear game_over_event
         self.game_over_event.clear()
@@ -277,6 +280,10 @@ class ChessClock:
                     self.initialize_clock(event)
                 # check status of game
                 if "status" in event:
+                    if event["status"] == "started":
+                        # most commonly expected
+                        self.move_made(event)
+
                     if event["status"] == "resign":
                         self.logger.info(
                             "\n!!! RESIGN RECIVED !!! (in ChessClock.start_new_game(...)\n"
@@ -286,12 +293,20 @@ class ChessClock:
                         else:
                             self.black_won()
 
-                    logger.warning(
-                        "event['status'] !=  'started': event['status'] is %s.",
-                        event["status"],
-                    )
-                # no matter what
-                self.move_made(event)
+                    elif event["status"] == "mate":
+                        self.logger.info(
+                            "\n!!! MATE RECIVED !!! (in ChessClock.start_new_game(...)\n"
+                        )
+                        if event["winner"] == "white":
+                            self.white_won()
+                        else:
+                            self.black_won()
+                    else:
+                        logger.warning(
+                            "UNKNOWN 'status': \n\n event['status'] !=  'started': event['status'] is %s.",
+                            event["status"],
+                        )
+                        raise NotImplementedError("UNKNOWN EVENT: event: %s", event)
 
     def show_splash(self) -> None:
         """Case 5: show the nl splash"""
@@ -638,25 +653,22 @@ def main() -> None:
                     logger.info("\n'gameStart' received from stream in main()")
                     # a game is starting, it is handled by a function
                     handle_game_start(event, berserk_client.board, chess_clock)
-                """
                 elif event["type"] == "gameFull":
-                    nl_inst.game_over.set()
-                    handle_resign(event)
-                    print("GAME FULL received")
                     logger.info("\ngameFull received\n")
-
-                # check for kill switch
-                if nl_inst.kill_switch.is_set():
-                    sys.exit(0)
-                """
+                    if event["status"] == "started":
+                        print("GAME FULL received")
+                        raise NotImplementedError("gamefull event: %s", event)
 
         except ResponseError as e:
             print(f"ERROR: Invalid server response: {e}")
             logger.info("Invalid server response: %s", e)
             if "Too Many Requests for url" in str(e):
-                sleep(10)
-
-        sleep(150)
+                sleep(150)
+            else:
+                # kill the program
+                raise RuntimeError("UNKNOWN ResponseError %s", e)
+        # sleep for some time b/f pulling endpoint again
+        sleep(100)
 
 
 if __name__ == "__main__":
