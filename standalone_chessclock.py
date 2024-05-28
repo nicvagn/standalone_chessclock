@@ -226,7 +226,7 @@ class ChessClock:
                 % (self.create_timestamp(self.displayed_wtime, self.displayed_btime))
             )
         else:
-            self.logger.warn(
+            self.logger.warning(
                 "ChessClock.game_over(): self.displayed_btime or self.displayed_wtime is None"
             )
         self.logger.info("ChessClock.game_over(...) called")
@@ -574,6 +574,11 @@ def handle_game_start(
         raise RuntimeError("lcd displaying game currently")
 
 
+def test_chessclock(chess_clock):
+    chess_clock.black_won()
+    readchar.readchar()
+
+
 def main() -> None:
     global logger
     PORT = "/dev/ttyACM0"
@@ -638,7 +643,7 @@ def main() -> None:
         logger=logger,
     )
 
-    # test_chessclock(chess_clock)
+    test_chessclock(chess_clock)
     # main program loop
     while True:
         try:
