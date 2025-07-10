@@ -8,6 +8,7 @@
 import logging
 import os
 import sys
+import threading
 from datetime import datetime, timedelta
 from threading import Event, Lock, Thread
 from time import sleep
@@ -183,7 +184,7 @@ class ChessClock:
                 "type(self.displayed_wtime): %s\n", type(self.displayed_wtime)
             )
             # HACK: the first "wtime" and "btime" are in millis not a timedelta
-            if type(self.displayed_wtime) == int:
+            if isinstance(self.displayed_wtime, int):
                 self.displayed_wtime = timedelta(milliseconds=self.displayed_wtime)
                 # if one, then both
                 self.displayed_btime = timedelta(milliseconds=self.displayed_btime)
@@ -200,8 +201,8 @@ class ChessClock:
 
     def update_lcd(self, wtime: timedelta, btime: timedelta) -> None:
         """keep the external timer displaying correct time.
-        The time stamp shuld be formated with both w and b timestamp set up to display
-        correctly on a 16 x 2 lcd
+        The time stamp shuld be formated with both w and b timestamp
+        set up to display correctly on a 16 x 2 lcd
         """
         timestamp = self.create_timestamp(wtime, btime)
         self.logger.info(
@@ -327,25 +328,6 @@ class ChessClock:
         self.chess_clock.write("8".encode("ascii"))
         self.game_over(display_message=False)
 
-    def show_splash(self) -> None:
-        """Case 5: show the nl splash"""
-        self.chess_clock.write("5".encode("ascii"))
-
-    def white_won(self) -> None:
-        """Case 6: show that white won"""
-        self.chess_clock.write("6".encode("ascii"))
-        self.game_over(display_message=False)
-
-    def black_won(self) -> None:
-        """Case 7: show that black won"""
-        self.chess_clock.write("7".encode("ascii"))
-        self.game_over(display_message=False)
-
-    def drawn_game(self) -> None:
-        """Case 8: show game is drawn"""
-        self.chess_clock.write("8".encode("ascii"))
-        self.game_over(display_message=False)
-
     def initialize_clock(self, gameState: dict) -> None:
         """initilize the clock. This involves reading the time from lila event
         and displaying the game time on the ext clock
@@ -391,7 +373,7 @@ class ChessClock:
         # signal that clock is initalized
         self.clock_initialized.set()
 
-    def display_initial_time() -> None:
+    def display_initial_time(self, state) -> None:
         with self.time_lock:
             # record the move_time
             self.logger.info("\ndisplay inital time entered: %s\n")
@@ -413,13 +395,12 @@ class ChessClock:
         """create timestamp with white and black time for display on lcd
         @param: wtime timedelta contaning whites time
         @param: btime timedelta contaning blacks time
-        @returns: a 2 X lcd_length string. It will overflow onto the seccond row
+        @returns: a 2 X lcd_length string. It will overflow onto the second row
         """
         # update the last received btime and wtime
         with self.time_lock:
             self.displayed_wtime = wtime
             self.displayed_btime = btime
-
             # ensure ts uses all the space, needed for lcd side
             white_time = f"W: { str(wtime) }"
             if len(white_time) > self.lcd_length:
@@ -495,7 +476,7 @@ class ChessClock:
             if chess_clock.game_over_event.is_set():
                 logger.warning("game_over_event is set")
                 raise NicLinkGameOver(
-                    """time_keeper(...) exiting. 
+                    """time_keeper(...) exiting.
 chess_clock.game_over_event.is_set()"""
                 )
             if chess_clock.move_time is None:
