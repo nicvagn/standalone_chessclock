@@ -1,3 +1,6 @@
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
 // messages
 #define WHITE_BLACK "|white|--|black|"
 #define BLACK_TURN "|white|>>|black|"
@@ -9,16 +12,24 @@
 
 // buttons
 #define DEBOUNCE_DELAY 50
-
 #define SDA_PIN 13
 #define SCL_PIN 14
+#define LCD_ADDR 0x27
+#define LCD_ROWS 16
+#define LCD_COL 2
+/**
+* LiquidCrystal_I2C  Constructor
+*
+* @param lcd_addr	I2C slave address of the LCD display. Most likely printed on the
+*					LCD circuit board, or look in the supplied LCD documentation.
+* @param lcd_cols	Number of columns your LCD display has.
+* @param lcd_rows	Number of rows your LCD display has.
+* @param charsize	The size in dots that the display has, use LCD_5x10DOTS or LCD_5x8DOTS.
+*/
+LiquidCrystal_I2C lcd(LCD_ADDR, LCD_ROWS, LCD_COL);
 
-#include <LiquidCrystal_I2C.h>
-#include <Wire.h>
-
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-enum Colour {white, black};
+enum Colour { white,
+              black };
 
 // Button structure to hold all state
 struct Button {
@@ -243,47 +254,76 @@ void reset() {
   Serial.println("CLOCK_RESET");
 }
 
-void setTime(unsigned long seconds, unsigned long increment, Colour colour)
-{
-  switch(colour)
-  {
-    case Colour::white:
-      whiteTime = seconds;
-
+bool parseTime(String token, unsigned long &outTime, unsigned long &outInc) {
+  int plusIdx = token.indexOf('+');
+  if (plusIdx > 0) {
+    outTime = token.substring(0, plusIdx).toInt() * 1000UL;
+    outInc = token.substring(plusIdx + 1).toInt() * 1000UL;
+  } else if (token.length() > 0) {
+    outTime = token.toInt() * 1000UL;
+    outInc = 0;
+  } else {
+    return false;
   }
+  return true;
 }
+
+
 
 void processSerialCommand(String cmd) {
   cmd.trim();
+  Serial.print("Serial cmd: [");
+  Serial.print(cmd);
+  Serial.println("]");
 
   // simple move command. The player to move is tracked
   if (cmd == "m") {
     moveMade();
+    // set time for both players
   } else if (cmd.startsWith("TIME:")) {
-    // Format: TIME:300+5 (300 seconds + 5 second increment)
-    // or TIME:300:0 (300 seconds, no increment)
+    // Format: TIME:300+5        (both players: 300s + 5s increment)
+    //         TIME:300+5,600+10 (white: 300s+5s, black: 600s+10s)
+    //         TIME:300,600      (white: 300s, black: 600s, no increment)
+    int commaIndex = cmd.indexOf(',');
 
-    /* find the position of theh first '+'. This denotes the end boundry between the start time and increment*/
-    int incrementIndex = cmd.indexOf('+');
-    if (incrementIndex > 0) {
-      // extract time values from TIME:timeStr+incStr
-      String timeStr = cmd.substring(5, incrementIndex);
-      String incStr = cmd.substring(incrementIndex + 1);
 
-      unsigned long seconds = timeStr.toInt();
-      unsigned long incSeconds = incStr.toInt();
+    unsigned long wTime = 0, wInc = 0, bTime = 0, bInc = 0;
+    bool valid = false;
 
-      whiteTime = seconds * 1000;
-      blackTime = seconds * 1000;
+    if (commaIndex > 0) {
+      Serial.print("commaIndex > 0. commaIndex black and white times.");
+      // Two separate tokens — white,black
+      String whiteTime = cmd.substring(5, commaIndex);
+      String blackTime = cmd.substring(commaIndex + 1);
+      valid = parseTime(whiteTime, wTime, wInc) && parseTime(blackTime, bTime, bInc);
+    } else {
+      // Single token — same time for both players
+      String time = cmd.substring(5);
+      valid = parseTime(time, wTime, wInc);
+      if (valid) {
+        bTime = wTime;
+        bInc = wInc;
+      }
+    }
+
+    if (valid) {
+      whiteTime = wTime;
+      blackTime = bTime;
+      whiteIncrement = wInc;  // store if you track increment separately
+      blackIncrement = bInc;
 
       lcd.setCursor(0, 0);
       lcd.print(WHITE_BLACK);
       displayTime();
 
-      Serial.print("TIME_SET:");
-      Serial.print(seconds);
+      Serial.print("TIME_SET:W=");
+      Serial.print(wTime / 1000);
       Serial.print("+");
-      Serial.println(incSeconds);
+      Serial.print(wInc / 1000);
+      Serial.print(",B=");
+      Serial.print(bTime / 1000);
+      Serial.print("+");
+      Serial.println(bInc / 1000);
     } else {
       Serial.println("ERROR: Invalid time");
     }
