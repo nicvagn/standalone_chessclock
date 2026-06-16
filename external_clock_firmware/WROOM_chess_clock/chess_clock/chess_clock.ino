@@ -17,6 +17,13 @@
 #define LCD_ADDR 0x27
 #define LCD_ROWS 16
 #define LCD_COL 2
+
+
+
+#define B_START_TIME  60000
+#define W_START_TIME  60000
+#define W_INCREMENT  6000
+#define B_INCREMENT  6000
 /**
 * LiquidCrystal_I2C  Constructor
 *
@@ -57,15 +64,11 @@ Button redBtn = {
   "Red Button",
   false,
 };
-// default times
-unsigned long INCREMENT = 6000;
-unsigned long B_START_TIME = 60000;
-unsigned long W_START_TIME = 60000;
 
 unsigned long whiteTime = W_START_TIME;
-unsigned long whiteIncrement = INCREMENT;
+unsigned long whiteIncrement = W_INCREMENT;
 unsigned long blackTime = B_START_TIME;
-unsigned long blackIncrement = INCREMENT;
+unsigned long blackIncrement = B_INCREMENT;
 
 bool connected = false;
 bool whiteToPlay = true;
@@ -242,8 +245,8 @@ void moveMade() {
 void reset() {
   whiteTime = W_START_TIME;
   blackTime = B_START_TIME;
-  whiteIncrement = INCREMENT;
-  blackIncrement = INCREMENT;
+  whiteIncrement = W_INCREMENT;
+  blackIncrement = B_INCREMENT;
   whiteToPlay = true;
   gameOver = false;
   clockRunning = false;

@@ -566,7 +566,7 @@ def main() -> None:
     BR = 115200  # baudrate for Serial connection
     REFRESH_DELAY = 100.0  # refresh delay for chess_clock
     SCRIPT_DIR = os.path.dirname(__file__)
-    TOKEN_FILE = os.path.join(SCRIPT_DIR, "lichess_token/token")
+    TOKEN_FILE = os.path.join(SCRIPT_DIR, "../lichess/lichess_token/token")
 
     try:
         logger.info("reading token from %s", TOKEN_FILE)
