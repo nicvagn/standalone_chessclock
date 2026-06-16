@@ -11,15 +11,14 @@
 #define GAMEOVER "  GAME  OVER   "
 
 // buttons
-#define DEBOUNCE_DELAY 50
+#define DEBOUNCE_DELAY 30
 #define SDA_PIN 13
 #define SCL_PIN 14
 #define LCD_ADDR 0x27
 #define LCD_ROWS 16
 #define LCD_COL 2
 
-
-
+// default times
 #define B_START_TIME  60000
 #define W_START_TIME  60000
 #define W_INCREMENT  6000
@@ -172,7 +171,6 @@ void gameDone() {
 }
 
 
-
 void displayTime() {
   unsigned int wTotalSec = whiteTime / 1000;
   unsigned int bTotalSec = blackTime / 1000;
@@ -205,7 +203,7 @@ void displayTime() {
     lcd.print(wCenti);
   }
 
-  lcd.print("|");
+  lcd.print("##");
 
   // Black time
   if (bH > 0) {
@@ -275,9 +273,12 @@ bool parseTime(String token, unsigned long &outTime, unsigned long &outInc) {
 
 void processSerialCommand(String cmd) {
   cmd.trim();
+
+#ifdef DEBUG
   Serial.print("Serial cmd: [");
   Serial.print(cmd);
   Serial.println("]");
+#endif
 
   // simple move command. The player to move is tracked
   if (cmd == "m") {
@@ -288,13 +289,11 @@ void processSerialCommand(String cmd) {
     //         TIME:300+5,600+10 (white: 300s+5s, black: 600s+10s)
     //         TIME:300,600      (white: 300s, black: 600s, no increment)
     int commaIndex = cmd.indexOf(',');
-
-
     unsigned long wTime = 0, wInc = 0, bTime = 0, bInc = 0;
     bool valid = false;
 
     if (commaIndex > 0) {
-      Serial.print("commaIndex > 0. commaIndex black and white times.");
+      Serial.println("commaIndex > 0, [TIME:(black time)+(black inc),(white time)+(white inc)] form");
       // Two separate tokens — white,black
       String whiteTime = cmd.substring(5, commaIndex);
       String blackTime = cmd.substring(commaIndex + 1);
@@ -312,13 +311,13 @@ void processSerialCommand(String cmd) {
     if (valid) {
       whiteTime = wTime;
       blackTime = bTime;
-      whiteIncrement = wInc;  // store if you track increment separately
+      whiteIncrement = wInc;
       blackIncrement = bInc;
 
       lcd.setCursor(0, 0);
       lcd.print(WHITE_BLACK);
       displayTime();
-
+#ifdef DEBUG
       Serial.print("TIME_SET:W=");
       Serial.print(wTime / 1000);
       Serial.print("+");
@@ -327,6 +326,7 @@ void processSerialCommand(String cmd) {
       Serial.print(bTime / 1000);
       Serial.print("+");
       Serial.println(bInc / 1000);
+#endif
     } else {
       Serial.println("ERROR: Invalid time");
     }
@@ -455,4 +455,4 @@ void loop() {
   checkButton(greenBtn);
 }
 
-//  LocalWords:  BMATE
+//  LocalWords:  BMATE commaIndex addr
