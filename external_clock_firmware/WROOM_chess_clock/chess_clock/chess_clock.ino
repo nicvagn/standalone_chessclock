@@ -1,3 +1,4 @@
+// /data/git/NicLink/standalone_chessclock/external_clock_firmware/WROOM_chess_clock/chess_clock/chess_clock.ino
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 
@@ -11,7 +12,7 @@
 #define GAMEOVER "  GAME  OVER   "
 
 // buttons
-#define DEBOUNCE_DELAY 30
+#define DEBOUNCE_DELAY 0
 #define SDA_PIN 13
 #define SCL_PIN 14
 #define LCD_ADDR 0x27
@@ -23,6 +24,10 @@
 #define W_START_TIME  60000
 #define W_INCREMENT  6000
 #define B_INCREMENT  6000
+
+#define GREEN_BTN_PIN 4
+#define RED_BTN_PIN 5
+
 /**
 * LiquidCrystal_I2C  Constructor
 *
@@ -48,7 +53,7 @@ struct Button {
 };
 
 Button greenBtn = {
-  6,
+  GREEN_BTN_PIN,
   HIGH,
   HIGH,
   0,
@@ -56,7 +61,7 @@ Button greenBtn = {
   false,
 };
 Button redBtn = {
-  7,
+  RED_BTN_PIN,
   HIGH,
   HIGH,
   0,
@@ -402,9 +407,9 @@ void checkButton(Button &btn) {
         Serial.print(btn.name);
         Serial.println(" pressed");
 
-        if (btn.pin == 6) {
+        if (btn.pin == RED_BTN_PIN) {
           moveMade();
-        } else if (btn.pin == 7) {
+        } else if (btn.pin == GREEN_BTN_PIN) {
           reset();
         }
         // the button is not momentary
